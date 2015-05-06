@@ -1,0 +1,24 @@
+# config.yaml
+
+command: /home/pi/raspberry-remote/send
+
+nSignals: 2
+
+timeout: 500
+
+sockets:
+  - descr: Schlafzimmer
+    code: 10101 1
+    label: A
+
+  - descr: Stehlampe
+    code: 10101 2
+    label: B
+
+  - descr: Regal
+    code: 10101 3
+    label: C
+
+  - descr: Couchtisch
+    code: 10101 4
+    label: D
