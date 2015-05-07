@@ -39,7 +39,7 @@ module.exports = hc.Plugin._extend({
     var tasks    = [];
     var cmd      = [this.config.get("command"), socket.code, state ? "1" : "0"].join(" ");
     var nSignals = this.config.get("nSignals");
-    var timeout  = this.config.get("timeout");
+    var delay    = this.config.get("delay");
 
     for (var i = 0; i < nSignals; ++i) {
       tasks.push(function(callback) {
@@ -47,7 +47,7 @@ module.exports = hc.Plugin._extend({
       });
       if (i + 1 < nSignals) {
         tasks.push(function(callback) {
-          setTimeout(callback, timeout);
+          setTimeout(callback, delay);
         });
       }
     }
