@@ -4,8 +4,6 @@ command: /home/pi/raspberry-remote/send
 
 nSignals: 2
 
-delay: 500
-
 sockets:
   - descr: Schlafzimmer
     code: 10101 1

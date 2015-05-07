@@ -1,7 +1,7 @@
 // load modules
 var hc    = require("homectrl");
-var async = require("async");
 var exec  = require("child_process").exec;
+var async = require("async");
 
 
 // define and export our plugin
@@ -10,6 +10,13 @@ module.exports = hc.Plugin._extend({
   setup: function setup() {
     setup._super.call(this);
 
+    var self = this;
+
+
+    // an async queue with concurrency 1
+    this.queue = async.queue(function(task, callback) {
+      self.triggerSocket(task.i, task.state, callback);
+    }, 1);
 
     // setup messages and routes
     this.setupMessages();
@@ -25,11 +32,6 @@ module.exports = hc.Plugin._extend({
   triggerSocket: function(i, state, callback) {
     var self = this;
 
-    if (callback === undefined) {
-      callback = function(){};
-    }
-
-
     var socket = this.config.get("sockets")[i];
     if (!socket) {
       callback(new Error("undefined socket " + i));
@@ -39,17 +41,11 @@ module.exports = hc.Plugin._extend({
     var tasks    = [];
     var cmd      = [this.config.get("command"), socket.code, state ? "1" : "0"].join(" ");
     var nSignals = this.config.get("nSignals");
-    var delay    = this.config.get("delay");
 
     for (var i = 0; i < nSignals; ++i) {
       tasks.push(function(callback) {
         exec(cmd, callback);
       });
-      if (i + 1 < nSignals) {
-        tasks.push(function(callback) {
-          setTimeout(callback, delay);
-        });
-      }
     }
 
     async.series(tasks, function(err) {
@@ -73,11 +69,9 @@ module.exports = hc.Plugin._extend({
   setupMessages: function() {
     var self = this;
 
-
     this.on("in.stateChange", function(socketId, i, state) {
-      self.triggerSocket(i, state);
+      self.queue.push({ i: i, state: state });
     });
-
 
     return this;
   },
@@ -87,15 +81,12 @@ module.exports = hc.Plugin._extend({
   setupRoutes: function() {
     var self = this;
 
-
     var sockets = this.config.get("sockets");
 
-    var allTasks = function(state) {
-      return sockets.map(function(_, i) {
-        return function(callback) {
-          self.triggerSocket(i, state, callback);
-        }
-      });
+    var all = function(state) {
+      for (var i in sockets) {
+        self.queue.push({ i: i, state: state });
+      }
     };
 
     this.GET("/sockets", function(req, res) {
@@ -103,15 +94,13 @@ module.exports = hc.Plugin._extend({
     });
 
     this.POST("/allon", function(req, res) {
-      async.series(allTasks(true), function() {
-        hc.send(res);
-      });
+      all(true);
+      hc.send(res);
     });
 
     this.POST("/alloff", function(req, res) {
-      async.series(allTasks(false), function() {
-        hc.send(res);
-      });
+      all(false);
+      hc.send(res);
     });
 
 
