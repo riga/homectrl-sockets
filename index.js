@@ -12,11 +12,15 @@ module.exports = hc.Plugin._extend({
 
     var self = this;
 
-
     // an async queue with concurrency 1
     this.queue = async.queue(function(task, callback) {
       self.triggerSocket(task.i, task.state, callback);
     }, 1);
+
+    // define an agenda job processor
+    this.server.agenda.define(this.prefix("trigger"), function(job, done) {
+      self.queue.push(job.attrs.data, done);
+    });
 
     // setup messages and routes
     this.setupMessages();
@@ -26,6 +30,8 @@ module.exports = hc.Plugin._extend({
       return socket.label + " (" + socket.descr + ")";
     });
     this.logger.info("setup: %s", logData.join(", "));
+
+    return this;
   },
 
 
@@ -59,7 +65,6 @@ module.exports = hc.Plugin._extend({
 
       callback(null);
     });
-
 
     return this;
   },
@@ -102,7 +107,6 @@ module.exports = hc.Plugin._extend({
       all(false);
       hc.send(res);
     });
-
 
     return this;
   }
