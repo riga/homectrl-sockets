@@ -74,8 +74,14 @@ module.exports = hc.Plugin._extend({
   setupMessages: function() {
     var self = this;
 
-    this.on("in.stateChange", function(socketId, i, state) {
+    this.on("in.trigger", function(socketId, i, state) {
       self.queue.push({ i: i, state: state });
+    });
+
+    this.on("in.triggerAll", function(socketId, state) {
+      for (var i in self.config.get("sockets")) {
+        self.queue.push({ i: i, state: state });
+      }
     });
 
     return this;
@@ -86,26 +92,8 @@ module.exports = hc.Plugin._extend({
   setupRoutes: function() {
     var self = this;
 
-    var sockets = this.config.get("sockets");
-
-    var all = function(state) {
-      for (var i in sockets) {
-        self.queue.push({ i: i, state: state });
-      }
-    };
-
     this.GET("/sockets", function(req, res) {
-      hc.send(res, sockets);
-    });
-
-    this.POST("/allon", function(req, res) {
-      all(true);
-      hc.send(res);
-    });
-
-    this.POST("/alloff", function(req, res) {
-      all(false);
-      hc.send(res);
+      hc.send(res, self.config.get("sockets"));
     });
 
     return this;

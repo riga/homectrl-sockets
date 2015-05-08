@@ -54,23 +54,23 @@ define([
 
         // events
         self.nodes.$content.find("#all-on").click(function() {
-          self.ajax("post", "allon");
+          self.emit("out.triggerAll", true);
         });
 
         self.nodes.$content.find("#all-off").click(function() {
-          self.ajax("post", "alloff");
+          self.emit("out.triggerAll", false);
         });
 
         // loop through sockets and add events to buttons
         sockets.forEach(function(_, i) {
           var $on = self.nodes.$content.find("#sockets > .socket#" + i + " #on");
           $on.click(function() {
-            self.emit("out.stateChange", i, true);
+            self.emit("out.trigger", i, true);
           });
 
           var $off = self.nodes.$content.find("#sockets > .socket#" + i + " #off");
           $off.click(function() {
-            self.emit("out.stateChange", i, false);
+            self.emit("out.trigger", i, false);
           });
         });
       });
