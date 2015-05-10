@@ -14,7 +14,7 @@ module.exports = hc.Plugin._extend({
 
     // an async queue with concurrency 1
     this.queue = async.queue(function(task, callback) {
-      self.triggerSocket(task.i, task.state, callback);
+      self.triggerSocket(task.id, task.state, callback);
     }, 1);
 
     // define an agenda job processor
@@ -35,12 +35,12 @@ module.exports = hc.Plugin._extend({
   },
 
 
-  triggerSocket: function(i, state, callback) {
+  triggerSocket: function(id, state, callback) {
     var self = this;
 
-    var socket = this.config.get("sockets")[i];
+    var socket = this.config.get("sockets")[id];
     if (!socket) {
-      callback(new Error("undefined socket " + i));
+      callback(new Error("undefined socket " + id));
       return this;
     }
 
@@ -73,13 +73,13 @@ module.exports = hc.Plugin._extend({
   setupMessages: function() {
     var self = this;
 
-    this.on("in.trigger", function(socketId, i, state) {
-      self.queue.push({ i: i, state: state });
+    this.on("in.trigger", function(socketId, id, state) {
+      self.queue.push({ id: id, state: state });
     });
 
     this.on("in.triggerAll", function(socketId, state) {
-      for (var i in self.config.get("sockets")) {
-        self.queue.push({ i: i, state: state });
+      for (var id in self.config.get("sockets")) {
+        self.queue.push({ id: id, state: state });
       }
     });
 
@@ -90,8 +90,63 @@ module.exports = hc.Plugin._extend({
   setupRoutes: function() {
     var self = this;
 
-    this.GET("/sockets", function(req, res) {
-      hc.send(res, self.config.get("sockets"));
+    var socketData = this.config.get("sockets");
+    socketData.forEach(function(data, i) {
+      data.id = i;
+    });
+
+    var parseState = function(state) {
+      return {
+        1    : true,
+        0    : false,
+        on   : true,
+        off  : false,
+        true : true,
+        false: false
+      }[state];
+    };
+
+    this.GET("sockets", function(req, res) {
+      hc.send(res, socketData);
+    });
+
+    this.GET("socket/:id", function(req, res) {
+      var id = parseInt(req.params.id);
+
+      if (isNaN(id) || id >= socketData.length) {
+        hc.send(res, 404, "invalid id");
+      } else {
+        hc.send(res, socketData[id]);
+      }
+    });
+
+    this.POST("socket/:id/:state", function(req, res) {
+      var id    = parseInt(req.params.id);
+      var state = parseState(req.params.state);
+
+      if (isNaN(id) || id >= socketData.length) {
+        hc.send(res, 500, "invalid id");
+      } else if (state == null) {
+        hc.send(res, 500, "invalid state");
+      } else {
+        self.queue.push({ id: id, state: state });
+
+        hc.send(res);
+      }
+    });
+
+    this.POST("sockets/:state", function(req, res) {
+      var state = parseState(req.params.state);
+
+      if (state == null) {
+        hc.send(res, 500, "invalid state");
+      } else {
+        for (var id in socketData) {
+          self.queue.push({ id: id, state: state });
+        }
+
+        hc.send(res);
+      }
     });
 
     return this;
