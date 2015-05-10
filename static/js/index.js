@@ -2,7 +2,7 @@ define([
   "homectrl",
   "jquery",
   "async",
-  "css!../css/styles"
+  "style!../css/styles"
 ], function(hc, $, async) {
 
   // define and return our plugin

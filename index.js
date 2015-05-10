@@ -70,7 +70,6 @@ module.exports = hc.Plugin._extend({
   },
 
 
-  // custom method
   setupMessages: function() {
     var self = this;
 
@@ -88,7 +87,6 @@ module.exports = hc.Plugin._extend({
   },
 
 
-  // custom method
   setupRoutes: function() {
     var self = this;
 
